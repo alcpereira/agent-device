@@ -99,14 +99,54 @@ export async function writeTarFixture(
   entries: readonly TarFixtureEntry[],
 ): Promise<void> {
   const pack = tar.pack();
+  const zeroModeNames = new Set<string>();
   for (const entry of entries) {
+    if (entry.header.mode === 0) zeroModeNames.add(entry.header.name);
     const header: tar.Headers & { pax?: Record<string, string> } = entry.pax
       ? { ...entry.header, pax: entry.pax }
-      : entry.header;
+      : { ...entry.header };
     pack.entry(header, Buffer.from(entry.data ?? ''));
   }
   pack.finalize();
   const chunks: Buffer[] = [];
   for await (const chunk of pack) chunks.push(Buffer.from(chunk));
-  await fs.writeFile(archivePath, Buffer.concat(chunks));
+  const archive = Buffer.concat(chunks);
+  restoreZeroTarModes(archive, zeroModeNames);
+  await fs.writeFile(archivePath, archive);
+}
+
+const TAR_BLOCK = 512;
+
+/**
+ * tar-stream's pack replaces a zero mode with its default, so a declared zero is written back into
+ * the emitted ustar header, checksum included.
+ */
+function restoreZeroTarModes(archive: Buffer, names: ReadonlySet<string>): void {
+  if (names.size === 0) return;
+  for (let offset = 0; offset + TAR_BLOCK <= archive.length;) {
+    const block = archive.subarray(offset, offset + TAR_BLOCK);
+    const name = readTarField(block, 0, 100);
+    if (!name) return;
+    if (names.has(name.replace(/\/$/, ''))) {
+      block.write('000000 ', 100, 'ascii');
+      block.write(`${tarChecksum(block).toString(8).padStart(6, '0')} `, 148, 'ascii');
+    }
+    const size = Number.parseInt(readTarField(block, 124, 12), 8) || 0;
+    offset += TAR_BLOCK + Math.ceil(size / TAR_BLOCK) * TAR_BLOCK;
+  }
+}
+
+function readTarField(block: Buffer, start: number, length: number): string {
+  return block
+    .toString('ascii', start, start + length)
+    .split('\0')[0]!
+    .trim();
+}
+
+function tarChecksum(block: Buffer): number {
+  let sum = 8 * 0x20;
+  for (let index = 0; index < TAR_BLOCK; index += 1) {
+    if (index < 148 || index >= 156) sum += block[index]!;
+  }
+  return sum;
 }

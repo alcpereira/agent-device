@@ -88,9 +88,15 @@ test('every declared mode extracts owner-accessible with set-id and sticky bits 
       const mode = extractedEntryMode(kind, declared);
       assert.equal(mode & ~0o777, 0, `${kind} ${declared.toString(8)} kept non-permission bits`);
       assert.equal(mode & ownerAccess[kind], ownerAccess[kind]);
-      if (declared & 0o777) assert.equal(mode & 0o077, declared & 0o077);
+      assert.equal(
+        mode & 0o077,
+        declared & 0o077,
+        `${kind} ${declared.toString(8)} changed group/other bits`,
+      );
     }
   }
   assert.equal(extractedEntryMode('directory', undefined), 0o755);
   assert.equal(extractedEntryMode('file', undefined), 0o644);
+  assert.equal(extractedEntryMode('directory', 0), 0o700);
+  assert.equal(extractedEntryMode('file', 0), 0o600);
 });

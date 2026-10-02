@@ -159,7 +159,7 @@ function toManifestEntry(entry: yauzl.Entry): ArchiveManifestEntry {
     name,
     kind,
     size: kind === 'directory' ? 0 : entry.uncompressedSize,
-    mode: extractedEntryMode(kind, unixMode),
+    mode: extractedEntryMode(kind, unixMode === 0 ? undefined : unixMode),
   };
 }
 

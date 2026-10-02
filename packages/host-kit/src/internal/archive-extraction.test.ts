@@ -199,6 +199,95 @@ test.each<ArchiveFixture>([
   assert.equal(mode & 0o100, 0o100);
 });
 
+test.each<ArchiveFixture>([
+  {
+    type: 'zip',
+    entries: [
+      { name: 'App.app/d/child', mode: S_IFREG | 0o644, data: 'x' },
+      { name: 'App.app/d/', mode: S_IFDIR | 0o700 },
+    ],
+  },
+  {
+    type: 'tar',
+    entries: [
+      { header: { name: 'App.app/d/child' }, data: 'x' },
+      { header: { name: 'App.app/d', type: 'directory', mode: 0o700 } },
+    ],
+  },
+])(
+  'a $type directory declared after its children still gets its declared mode',
+  async (fixture) => {
+    const { outputRoot, error } = await extractFixture(fixture);
+
+    assert.equal(error, undefined);
+    assert.equal((await fs.stat(path.join(outputRoot, 'App.app/d'))).mode & 0o777, 0o700);
+  },
+);
+
+test.each<ArchiveFixture>([
+  {
+    type: 'zip',
+    entries: [
+      { name: 'App.app/private/', mode: S_IFDIR },
+      { name: 'App.app/private/secret', mode: S_IFREG, data: 'x' },
+    ],
+  },
+  {
+    type: 'tar',
+    entries: [
+      { header: { name: 'App.app/private', type: 'directory', mode: 0 } },
+      { header: { name: 'App.app/private/secret', mode: 0 }, data: 'x' },
+    ],
+  },
+])('an explicit $type mode of zero extracts with owner access only', async (fixture) => {
+  const { outputRoot, error } = await extractFixture(fixture);
+
+  assert.equal(error, undefined);
+  assert.equal((await fs.stat(path.join(outputRoot, 'App.app/private'))).mode & 0o777, 0o700);
+  assert.equal(
+    (await fs.stat(path.join(outputRoot, 'App.app/private/secret'))).mode & 0o777,
+    0o600,
+  );
+});
+
+test('a zip entry without Unix attributes gets the default mode', async () => {
+  const { outputRoot, error } = await extractFixture({
+    type: 'zip',
+    entries: [
+      { name: 'App.app/dir/', mode: 0 },
+      { name: 'App.app/dir/file', mode: 0, data: 'x' },
+    ],
+  });
+
+  assert.equal(error, undefined);
+  const directory = (await fs.stat(path.join(outputRoot, 'App.app/dir'))).mode & 0o777;
+  const file = (await fs.stat(path.join(outputRoot, 'App.app/dir/file'))).mode & 0o777;
+  assert.equal(directory, 0o755 & ~process.umask());
+  assert.equal(file, 0o644 & ~process.umask());
+});
+
+test.each<ArchiveFixture>([
+  {
+    type: 'zip',
+    entries: [
+      { name: 'App.app/x', mode: S_IFREG | 0o644, data: 'file' },
+      { name: 'App.app/x/', mode: S_IFDIR | 0o755 },
+    ],
+  },
+  {
+    type: 'tar',
+    entries: [
+      { header: { name: 'App.app/x' }, data: 'file' },
+      { header: { name: 'App.app/x', type: 'directory' } },
+    ],
+  },
+])('a $type directory colliding with an earlier file is refused', async (fixture) => {
+  const { outputRoot, error } = await extractFixture(fixture);
+
+  assert.equal((error as NodeJS.ErrnoException).code, 'EEXIST');
+  assert.equal(await pathExists(outputRoot), false);
+});
+
 const UNREADABLE_DIRECTORY = {
   zip: { name: 'App.app/locked/', mode: S_IFDIR | 0o300 },
   tar: { header: { name: 'App.app/locked', type: 'directory', mode: 0o300 } },
