@@ -1,3 +1,4 @@
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { AppError } from '@agent-device/kernel/errors';
 import {
@@ -177,6 +178,35 @@ export function resolveArchiveOutputPath(outputRoot: string, entryName: string):
     throw archiveError('ARCHIVE_UNSAFE_PATH', 'Archive entry escapes the extraction root');
   }
   return resolvedEntry;
+}
+
+const DEFAULT_ENTRY_PERMISSIONS = { directory: 0o755, file: 0o644 } as const;
+const OWNER_ENTRY_ACCESS = { directory: 0o700, file: 0o600 } as const;
+
+/**
+ * The mode an extracted entry is written with: declared permission bits only, never set-id or
+ * sticky bits, and always enough owner access that the extraction root can be removed recursively.
+ */
+export function extractedEntryMode(
+  kind: ArchiveManifestEntry['kind'],
+  declaredMode: number | undefined,
+): number {
+  const permissions = (declaredMode ?? 0) & 0o777;
+  return (permissions || DEFAULT_ENTRY_PERMISSIONS[kind]) | OWNER_ENTRY_ACCESS[kind];
+}
+
+/**
+ * Creates one directory entry with its own mode. Parents an archive never declared are created
+ * with the default mode, and a directory an earlier entry already implied is accepted as is.
+ */
+export async function createExtractedDirectory(outputPath: string, mode: number): Promise<void> {
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  try {
+    await fs.mkdir(outputPath, { mode });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    if (!(await fs.lstat(outputPath)).isDirectory()) throw error;
+  }
 }
 
 export function archiveError(reason: string, message: string, cause?: unknown): AppError {
