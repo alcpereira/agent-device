@@ -236,7 +236,11 @@ test.each<ArchiveFixture>([
     type: 'tar',
     entries: [
       { header: { name: 'App.app/private', type: 'directory', mode: 0 } },
-      { header: { name: 'App.app/private/secret', mode: 0 }, data: 'x' },
+      {
+        header: { name: 'App.app/private/secret', mode: 0 },
+        pax: { path: 'App.app/private/secret' },
+        data: 'x',
+      },
     ],
   },
 ])('an explicit $type mode of zero extracts with owner access only', async (fixture) => {
