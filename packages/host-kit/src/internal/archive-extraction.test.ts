@@ -199,28 +199,30 @@ test.each<ArchiveFixture>([
   assert.equal(mode & 0o100, 0o100);
 });
 
-test.each<ArchiveFixture>([
-  {
-    type: 'zip',
-    entries: [
-      { name: 'App.app/d/child', mode: S_IFREG | 0o644, data: 'x' },
-      { name: 'App.app/d/', mode: S_IFDIR | 0o700 },
-    ],
-  },
-  {
-    type: 'tar',
-    entries: [
-      { header: { name: 'App.app/d/child' }, data: 'x' },
-      { header: { name: 'App.app/d', type: 'directory', mode: 0o700 } },
-    ],
-  },
+const GROUP_WRITABLE_DIRECTORY = {
+  zip: { name: 'App.app/d/', mode: S_IFDIR | 0o770 },
+  tar: { header: { name: 'App.app/d', type: 'directory', mode: 0o770 } },
+} as const;
+const DIRECTORY_CHILD = {
+  zip: { name: 'App.app/d/child', mode: S_IFREG | 0o644, data: 'x' },
+  tar: { header: { name: 'App.app/d/child' }, data: 'x' },
+} as const;
+
+test.each<ArchiveFixture & { order: 'before' | 'after' }>([
+  { type: 'zip', order: 'before', entries: [GROUP_WRITABLE_DIRECTORY.zip, DIRECTORY_CHILD.zip] },
+  { type: 'zip', order: 'after', entries: [DIRECTORY_CHILD.zip, GROUP_WRITABLE_DIRECTORY.zip] },
+  { type: 'tar', order: 'before', entries: [GROUP_WRITABLE_DIRECTORY.tar, DIRECTORY_CHILD.tar] },
+  { type: 'tar', order: 'after', entries: [DIRECTORY_CHILD.tar, GROUP_WRITABLE_DIRECTORY.tar] },
 ])(
-  'a $type directory declared after its children still gets its declared mode',
+  'a $type directory declared $order its children gets its declared mode under the umask',
   async (fixture) => {
     const { outputRoot, error } = await extractFixture(fixture);
 
     assert.equal(error, undefined);
-    assert.equal((await fs.stat(path.join(outputRoot, 'App.app/d'))).mode & 0o777, 0o700);
+    assert.equal(
+      (await fs.stat(path.join(outputRoot, 'App.app/d'))).mode & 0o777,
+      0o770 & ~process.umask(),
+    );
   },
 );
 
