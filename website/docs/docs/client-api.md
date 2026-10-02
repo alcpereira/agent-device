@@ -429,7 +429,7 @@ If the daemon cannot determine installed app identity, the request fails instead
 `installFromSource()` URL sources are intentionally limited:
 
 - Private and loopback hosts are blocked by default.
-- URL sources from any public host may point directly to an installable or to a `.zip`, `.tar`, `.tar.gz`, or `.tgz` archive containing exactly one.
+- URL sources from any public host may point directly to an installable, including a bare iOS `.ipa`, or to a `.zip`, `.tar`, `.tar.gz`, or `.tgz` archive containing exactly one.
 - For existing reachable artifact URLs, use `source: { kind: 'url', url: ... }`.
 - For local artifacts, use `source: { kind: 'path', path: ... }` or the CLI `install`/`reinstall` commands.
 - For compatible remote daemons that resolve CI artifacts server-side, pass a GitHub Actions artifact source:
