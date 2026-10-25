@@ -29,7 +29,6 @@ import {
 import { readVersion } from '@agent-device/host-kit/version';
 import { readHostCpuArch } from '@agent-device/host-kit/process';
 import { shouldStreamRequestProgress } from '@agent-device/daemon-contracts/request-progress-protocol';
-import { statusCodeForNormalizedError } from '../http-errors.ts';
 import { tryHandleUploadHttpRoute } from '../upload-http.ts';
 import { tryHandleDownloadableArtifactHttpRoute } from '../downloadable-artifact-http.ts';
 import { tryHandleRequestDiagnosticsHttpRoute } from '../request-diagnostics-http.ts';
@@ -742,7 +741,7 @@ function sendRpcRequestFailure(
     writeRpcResponseEnvelope(res, response);
     return;
   }
-  sendJson(res, response, statusCodeForNormalizedError(failure.code));
+  sendJson(res, response, statusCodeForDaemonError(failure));
 }
 
 function rpcAnswerFor(rpcRequest: JsonRpcRequest, daemonResponse: DaemonResponse): JsonRpcResponse {

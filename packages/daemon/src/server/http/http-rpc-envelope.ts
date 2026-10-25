@@ -74,10 +74,7 @@ function statusCodeForDaemonError(error: {
   code: string;
   details?: Record<string, unknown>;
 }): number {
-  if (error.code === 'DEVICE_IN_USE' && error.details?.reason === 'human_control_active') {
-    return 423;
-  }
-  return statusCodeForNormalizedError(error.code);
+  return statusCodeForNormalizedError(error);
 }
 
 export {

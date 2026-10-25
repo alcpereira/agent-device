@@ -242,6 +242,12 @@ stop that daemon first. A denied request fails with `UNAUTHORIZED` and
 
 The proxy serves only the daemon HTTP contract: `/health`, `/rpc`, `/upload` plus resumable `/upload/*` routes, and `/artifacts/*`, with the same routes also available under `/agent-device/*`. Health checks are unauthenticated; command, upload, and artifact routes require the bearer token.
 
+The proxy passes the daemon's HTTP status through. A failed upload or artifact request answers a
+JSON body `{ "ok": false, "error", "code" }`, plus `reason` and `hint` when the daemon has them. An
+artifact, upload, or materialized-path id that was already consumed, has expired, or never existed
+answers `404` with `code: "COMMAND_FAILED"` and `reason: "RESOURCE_EXPIRED"`. The same id named in
+a `/rpc` command also answers `404`. A `5xx` status means the daemon failed.
+
 The proxy checks the client token and forwards authorized requests with the local daemon token. Remote clients never see the daemon token.
 
 The proxy does not forward `/admin/*`, including human-control holds. A caller on the device host
