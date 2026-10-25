@@ -29,6 +29,7 @@ import {
 import { readVersion } from '@agent-device/host-kit/version';
 import { readHostCpuArch } from '@agent-device/host-kit/process';
 import { shouldStreamRequestProgress } from '@agent-device/daemon-contracts/request-progress-protocol';
+import { statusCodeForNormalizedError } from '../http-errors.ts';
 import { tryHandleUploadHttpRoute } from '../upload-http.ts';
 import { tryHandleDownloadableArtifactHttpRoute } from '../downloadable-artifact-http.ts';
 import { tryHandleRequestDiagnosticsHttpRoute } from '../request-diagnostics-http.ts';
@@ -48,7 +49,6 @@ import {
   createRpcError,
   jsonRpcCodeForNormalizedError,
   sendJson,
-  statusCodeForDaemonError,
   writeProgressEnvelope,
   writeRpcResponseEnvelope,
   type JsonRpcRequest,
@@ -741,7 +741,7 @@ function sendRpcRequestFailure(
     writeRpcResponseEnvelope(res, response);
     return;
   }
-  sendJson(res, response, statusCodeForDaemonError(failure));
+  sendJson(res, response, statusCodeForNormalizedError(failure));
 }
 
 function rpcAnswerFor(rpcRequest: JsonRpcRequest, daemonResponse: DaemonResponse): JsonRpcResponse {
@@ -758,5 +758,5 @@ function rpcAnswerFor(rpcRequest: JsonRpcRequest, daemonResponse: DaemonResponse
 
 // A successful plain answer has no status to choose; 200 is `sendJson`'s own default.
 function plainAnswerStatus(daemonResponse: DaemonResponse): number {
-  return daemonResponse.ok ? 200 : statusCodeForDaemonError(daemonResponse.error);
+  return daemonResponse.ok ? 200 : statusCodeForNormalizedError(daemonResponse.error);
 }
