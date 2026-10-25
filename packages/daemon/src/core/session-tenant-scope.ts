@@ -41,6 +41,11 @@ export function tenantScopedSessionName(tenant: string, session: string): string
   return isTenantOwnedSessionName(tenant, session) ? session : `${tenant}:${session}`;
 }
 
+/** The session name the tenant's client used: the inverse of `tenantScopedSessionName`. */
+export function tenantPublicSessionName(tenant: string, session: string): string {
+  return isTenantOwnedSessionName(tenant, session) ? session.slice(tenant.length + 1) : session;
+}
+
 /**
  * Whether a caller in `namespace` may address `sessionName` by name — the read
  * counterpart of `scopeRequestSession`'s naming decision, and the only tenant
