@@ -43,7 +43,7 @@ export function retainLeasedSessionRecording(
     }
   } catch (error) {
     for (const artifactId of artifactIds) cleanupDownloadableArtifact(artifactId);
-    for (const artifact of artifacts) fs.rmSync(artifact.path!, { force: true });
+    for (const artifact of artifacts) removeBestEffort(artifact.path!);
     emitDiagnostic({
       level: 'warn',
       phase: 'leased_session_recording_retention_failed',
@@ -56,6 +56,14 @@ export function retainLeasedSessionRecording(
     phase: 'leased_session_recording_retained',
     data: { session: ref.address, sessionName, leaseId: lease.leaseId, artifactIds },
   });
+}
+
+function removeBestEffort(filePath: string): void {
+  try {
+    fs.rmSync(filePath, { force: true });
+  } catch {
+    // A file that cannot be removed must not stop the removal of the others.
+  }
 }
 
 function isRemoteRecordingExport(completion: ScreenRecordingCompletion): boolean {

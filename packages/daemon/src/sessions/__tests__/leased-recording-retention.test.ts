@@ -297,6 +297,7 @@ test('an unleased session teardown registers nothing for a remote export', async
 
   await teardown(sessionStore);
 
+  expect(await listDownloadableArtifacts(TENANT, process.env)).toEqual([]);
   expect(await listDownloadableArtifacts(undefined, process.env)).toEqual([]);
   expect(fs.existsSync(recordingExport.outPath)).toBe(true);
 });

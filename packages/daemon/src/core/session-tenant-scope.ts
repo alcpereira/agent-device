@@ -41,7 +41,7 @@ export function tenantScopedSessionName(tenant: string, session: string): string
   return isTenantOwnedSessionName(tenant, session) ? session : `${tenant}:${session}`;
 }
 
-/** The session name the tenant's client used: the inverse of `tenantScopedSessionName`. */
+/** The tenant-relative name that addresses this session under tenant scoping. */
 export function tenantPublicSessionName(tenant: string, session: string): string {
   return isTenantOwnedSessionName(tenant, session) ? session.slice(tenant.length + 1) : session;
 }

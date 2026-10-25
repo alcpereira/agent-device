@@ -12,7 +12,6 @@ import { finishLiveAudioProbe } from '@agent-device/capture-kit/audio-probe-sess
 import { finishLivePerfCapture } from '@agent-device/capture-kit/perf-capture-session-resource';
 import { finishLiveScreenRecording } from '@agent-device/capture-kit/screen-recording-session-resource';
 import { openWebSessionNames } from './web-session-names.ts';
-import { retainLeasedSessionRecording } from './leased-recording-retention.ts';
 import type { PlatformResourceCleanup } from '../core/platform-resource-cleanup.ts';
 
 export async function stopSessionAppLog(params: {
@@ -206,6 +205,8 @@ export async function finishSessionScreenRecording(params: {
   const binding = bindSessionScreenRecording(params.sessionStore, params.ref);
   if (!binding.read()) return;
   const completion = await finishLiveScreenRecording({ binding, intent: 'disposal' });
+  if (!params.ref.session.lease) return;
+  const { retainLeasedSessionRecording } = await import('./leased-recording-retention.ts');
   retainLeasedSessionRecording(params.ref, completion);
 }
 

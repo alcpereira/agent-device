@@ -346,7 +346,7 @@ A leased session's teardown that commits an export at a remote temp path registe
 The inventory names the session, and the usual delete-after-download and 15-minute expiry apply.
 A later `record stop` replay of that manifest serves the same artifact ids.
 If registration fails, teardown deletes the files.
-A failed finish still runs forced cleanup and registers nothing.
+A failed teardown finish still runs forced cleanup (disposal intent) and registers nothing.
 
 ### 2.6 Native markers
 
